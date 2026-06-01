@@ -43,7 +43,8 @@ async def _query_openai_compatible(
 async def _query_bedrock(
     model: str,
     messages: List[Dict[str, str]],
-    timeout: float = 120.0
+    timeout: float = 120.0,
+    api_key: str = None
 ) -> Optional[Dict[str, Any]]:
     model_id = _bedrock_model_id(model)
     bedrock_messages = [
@@ -51,11 +52,12 @@ async def _query_bedrock(
         for m in messages
     ]
 
-    if AWS_BEARER_TOKEN_BEDROCK:
+    token = api_key or AWS_BEARER_TOKEN_BEDROCK
+    if token:
         # Bearer token auth via REST API
         url = f"https://bedrock-runtime.{AWS_REGION}.amazonaws.com/model/{model_id}/converse"
         headers = {
-            "Authorization": f"Bearer {AWS_BEARER_TOKEN_BEDROCK}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
         payload = {"messages": bedrock_messages}
@@ -82,12 +84,13 @@ async def _query_bedrock(
 async def query_model(
     model: str,
     messages: List[Dict[str, str]],
-    timeout: float = 120.0
+    timeout: float = 120.0,
+    api_key: str = None
 ) -> Optional[Dict[str, Any]]:
     """Query a model via the appropriate provider."""
     try:
         if _is_bedrock(model):
-            return await _query_bedrock(model, messages, timeout)
+            return await _query_bedrock(model, messages, timeout, api_key)
         return await _query_openai_compatible(model, messages, timeout)
     except Exception as e:
         print(f"Error querying model {model}: {e}")
@@ -96,9 +99,10 @@ async def query_model(
 
 async def query_models_parallel(
     models: List[str],
-    messages: List[Dict[str, str]]
+    messages: List[Dict[str, str]],
+    api_key: str = None
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """Query multiple models in parallel."""
-    tasks = [query_model(model, messages) for model in models]
+    tasks = [query_model(model, messages, api_key=api_key) for model in models]
     responses = await asyncio.gather(*tasks)
     return {model: response for model, response in zip(models, responses)}
