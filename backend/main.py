@@ -35,6 +35,7 @@ class SendMessageRequest(BaseModel):
     content: str
     council_models: List[str] | None = None
     chairman_model: str | None = None
+    api_key: str | None = None
 
 
 class ConversationMetadata(BaseModel):
@@ -67,6 +68,25 @@ async def get_models():
         "default_council": COUNCIL_MODELS,
         "default_chairman": CHAIRMAN_MODEL,
     }
+
+
+class TestKeyRequest(BaseModel):
+    api_key: str
+
+
+@app.post("/api/test-key")
+async def test_key(request: TestKeyRequest):
+    """Test if a Bedrock API key is valid."""
+    from .llm_client import query_model
+    result = await query_model(
+        "bedrock/us.anthropic.claude-sonnet-4-6",
+        [{"role": "user", "content": "hi"}],
+        timeout=15.0,
+        api_key=request.api_key
+    )
+    if result:
+        return {"status": "ok"}
+    raise HTTPException(status_code=401, detail="API key is invalid or expired")
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])
@@ -158,6 +178,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             # Resolve models
             council_models = request.council_models or COUNCIL_MODELS
             chairman_model = request.chairman_model or CHAIRMAN_MODEL
+            api_key = request.api_key
 
             # Start title generation in parallel (don't await yet)
             title_task = None
@@ -166,18 +187,18 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
             # Stage 1: Collect responses
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content, council_models)
+            stage1_results = await stage1_collect_responses(request.content, council_models, api_key=api_key)
             yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
             # Stage 2: Collect rankings
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, council_models)
+            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, council_models, api_key=api_key)
             aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
             yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
 
             # Stage 3: Synthesize final answer
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
-            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, chairman_model)
+            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, chairman_model, api_key=api_key)
             yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
 
             # Wait for title generation if it was started

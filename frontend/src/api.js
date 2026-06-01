@@ -85,7 +85,7 @@ export const api = {
    * @param {object} modelConfig - Optional { council_models, chairman_model }
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent, { council_models, chairman_model } = {}) {
+  async sendMessageStream(conversationId, content, onEvent, { council_models, chairman_model, api_key } = {}) {
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -93,7 +93,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, council_models, chairman_model }),
+        body: JSON.stringify({ content, council_models, chairman_model, api_key }),
       }
     );
 

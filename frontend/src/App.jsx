@@ -13,6 +13,7 @@ function App() {
   const [availableModels, setAvailableModels] = useState([]);
   const [councilModels, setCouncilModels] = useState([]);
   const [chairmanModel, setChairmanModel] = useState('');
+  const [apiKey, setApiKey] = useState('');
 
   // Load conversations and models on mount
   useEffect(() => {
@@ -106,7 +107,7 @@ function App() {
       }));
 
       // Send message with streaming
-      const modelConfig = { council_models: councilModels, chairman_model: chairmanModel };
+      const modelConfig = { council_models: councilModels, chairman_model: chairmanModel, api_key: apiKey || undefined };
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
@@ -245,8 +246,10 @@ function App() {
             available={availableModels}
             selected={councilModels}
             chairman={chairmanModel}
+            apiKey={apiKey}
             onChangeCouncil={setCouncilModels}
             onChangeChairman={setChairmanModel}
+            onChangeApiKey={setApiKey}
           />
         )}
         <ChatInterface

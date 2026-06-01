@@ -5,14 +5,14 @@ from .llm_client import query_models_parallel, query_model
 from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
 
 
-async def stage1_collect_responses(user_query: str, models: List[str] = None) -> List[Dict[str, Any]]:
+async def stage1_collect_responses(user_query: str, models: List[str] = None, api_key: str = None) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
     """
     if models is None:
         models = COUNCIL_MODELS
     messages = [{"role": "user", "content": user_query}]
-    responses = await query_models_parallel(models, messages)
+    responses = await query_models_parallel(models, messages, api_key=api_key)
 
     # Format results
     stage1_results = []
@@ -29,7 +29,8 @@ async def stage1_collect_responses(user_query: str, models: List[str] = None) ->
 async def stage2_collect_rankings(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
-    models: List[str] = None
+    models: List[str] = None,
+    api_key: str = None
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
@@ -85,7 +86,7 @@ Now provide your evaluation and ranking:"""
     messages = [{"role": "user", "content": ranking_prompt}]
 
     # Get rankings from all council models in parallel
-    responses = await query_models_parallel(models, messages)
+    responses = await query_models_parallel(models, messages, api_key=api_key)
 
     # Format results
     stage2_results = []
@@ -106,7 +107,8 @@ async def stage3_synthesize_final(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
     stage2_results: List[Dict[str, Any]],
-    chairman_model: str = None
+    chairman_model: str = None,
+    api_key: str = None
 ) -> Dict[str, Any]:
     """
     Stage 3: Chairman synthesizes final response.
@@ -144,7 +146,7 @@ Provide a clear, well-reasoned final answer that represents the council's collec
     messages = [{"role": "user", "content": chairman_prompt}]
 
     # Query the chairman model
-    response = await query_model(chairman_model, messages)
+    response = await query_model(chairman_model, messages, api_key=api_key)
 
     if response is None:
         # Fallback if chairman fails
