@@ -5,22 +5,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# OpenRouter API key
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# OpenAI-compatible provider config (OpenRouter, OpenAI, etc.)
+LLM_API_KEY = os.getenv("LLM_API_KEY", os.getenv("OPENROUTER_API_KEY", ""))
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://openrouter.ai/api/v1")
 
-# Council members - list of OpenRouter model identifiers
+# AWS Bedrock config
+AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
+AWS_BEARER_TOKEN_BEDROCK = os.getenv("AWS_BEARER_TOKEN_BEDROCK", "")
+
+# Council members - prefix with "bedrock/" to use Bedrock, otherwise OpenAI-compatible
 COUNCIL_MODELS = [
-    "openai/gpt-5.1",
-    "google/gemini-3-pro-preview",
-    "anthropic/claude-sonnet-4.5",
-    "x-ai/grok-4",
+    "bedrock/us.anthropic.claude-opus-4-8",
+    "bedrock/us.anthropic.claude-sonnet-4-6",
+    "bedrock/us.amazon.nova-pro-v1:0",
+    "bedrock/us.meta.llama4-maverick-17b-instruct-v1:0",
 ]
 
 # Chairman model - synthesizes final response
-CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
-
-# OpenRouter API endpoint
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+CHAIRMAN_MODEL = "bedrock/us.anthropic.claude-opus-4-7"
 
 # Data directory for conversation storage
 DATA_DIR = "data/conversations"

@@ -163,6 +163,13 @@ function App() {
 
           case 'error':
             console.error('Stream error:', event.message);
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              lastMsg.error = event.message;
+              lastMsg.loading = { stage1: false, stage2: false, stage3: false };
+              return { ...prev, messages };
+            });
             setIsLoading(false);
             break;
 
@@ -172,13 +179,39 @@ function App() {
       });
     } catch (error) {
       console.error('Failed to send message:', error);
-      // Remove optimistic messages on error
-      setCurrentConversation((prev) => ({
-        ...prev,
-        messages: prev.messages.slice(0, -2),
-      }));
+      setCurrentConversation((prev) => {
+        const messages = [...prev.messages];
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant') {
+          lastMsg.error = error.message || 'Request failed';
+          lastMsg.loading = { stage1: false, stage2: false, stage3: false };
+        }
+        return { ...prev, messages };
+      });
       setIsLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    // Find the last user message and retry
+    const messages = currentConversation?.messages || [];
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUserMsg) return;
+
+    // Remove the failed assistant message
+    setCurrentConversation((prev) => ({
+      ...prev,
+      messages: prev.messages.slice(0, -1),
+    }));
+
+    // Resend — handleSendMessage will add the user message back optimistically,
+    // so remove it too
+    setCurrentConversation((prev) => ({
+      ...prev,
+      messages: prev.messages.slice(0, -1),
+    }));
+
+    handleSendMessage(lastUserMsg.content);
   };
 
   return (
@@ -192,6 +225,7 @@ function App() {
       <ChatInterface
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
+        onRetry={handleRetry}
         isLoading={isLoading}
       />
     </div>

@@ -32,29 +32,68 @@ npm install
 cd ..
 ```
 
-### 2. Configure API Key
+### 2. Configure API Provider
 
-Create a `.env` file in the project root:
+The backend supports **any OpenAI-compatible API** (OpenRouter, OpenAI, etc.) and **AWS Bedrock**. You can mix providers freely.
+
+Create a `.env` file in the project root with the credentials for your chosen provider(s):
+
+#### Option A: AWS Bedrock (API Key)
 
 ```bash
-OPENROUTER_API_KEY=sk-or-v1-...
+AWS_BEARER_TOKEN_BEDROCK=bedrock-api-key-...
 ```
 
-Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
+Generate a key in the [AWS Bedrock console](https://console.aws.amazon.com/bedrock/) under **API keys**. Short-term keys expire after 12 hours — regenerate and update `.env` when they expire.
 
-### 3. Configure Models (Optional)
+To refresh the key:
+```bash
+# Replace the value with your new key
+echo 'AWS_BEARER_TOKEN_BEDROCK=bedrock-api-key-...' > .env
+```
 
-Edit `backend/config.py` to customize the council:
+Then restart the backend.
+
+#### Option B: AWS Bedrock (IAM credentials)
+
+If you have AWS credentials configured (via `~/.aws/credentials`, env vars, or IAM role), leave `AWS_BEARER_TOKEN_BEDROCK` unset and the client will use boto3's standard credential chain.
+
+#### Option C: OpenAI-compatible API (OpenRouter, OpenAI, etc.)
+
+```bash
+LLM_API_KEY=sk-or-v1-...
+LLM_BASE_URL=https://openrouter.ai/api/v1
+```
+
+`LLM_BASE_URL` defaults to OpenRouter. Set it to `https://api.openai.com/v1` for direct OpenAI, or any other compatible endpoint.
+
+### 3. Configure Models
+
+Edit `backend/config.py` to customize the council. Prefix model IDs with `bedrock/` to route through Bedrock:
 
 ```python
+# Bedrock models (use cross-region inference profile IDs)
+COUNCIL_MODELS = [
+    "bedrock/us.anthropic.claude-opus-4-8",
+    "bedrock/us.anthropic.claude-sonnet-4-6",
+    "bedrock/us.amazon.nova-pro-v1:0",
+    "bedrock/us.meta.llama4-maverick-17b-instruct-v1:0",
+]
+CHAIRMAN_MODEL = "bedrock/us.anthropic.claude-opus-4-7"
+
+# Or OpenAI-compatible models (no prefix)
 COUNCIL_MODELS = [
     "openai/gpt-5.1",
     "google/gemini-3-pro-preview",
     "anthropic/claude-sonnet-4.5",
-    "x-ai/grok-4",
 ]
-
 CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
+
+# Or mix both
+COUNCIL_MODELS = [
+    "bedrock/us.anthropic.claude-opus-4-8",
+    "openai/gpt-5.1",
+]
 ```
 
 ## Running the Application
@@ -81,7 +120,7 @@ Then open http://localhost:5173 in your browser.
 
 ## Tech Stack
 
-- **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
+- **Backend:** FastAPI (Python 3.10+), async httpx, AWS Bedrock / OpenAI-compatible APIs
 - **Frontend:** React + Vite, react-markdown for rendering
 - **Storage:** JSON files in `data/conversations/`
 - **Package Management:** uv for Python, npm for JavaScript

@@ -5,9 +5,60 @@ import Stage2 from './Stage2';
 import Stage3 from './Stage3';
 import './ChatInterface.css';
 
+function buildMarkdownExport(messages) {
+  let body = '';
+  let appendixA = '';
+  let appendixB = '';
+
+  for (const msg of messages) {
+    if (msg.role === 'user') {
+      body += `## Question\n\n${msg.content}\n\n`;
+    } else {
+      if (msg.stage3) {
+        body += `## Council Answer\n\n`;
+        body += `**Chairman:** ${msg.stage3.model}\n\n${msg.stage3.response}\n\n`;
+        body += `---\n\n`;
+        body += `*See [Appendix A](#appendix-a-individual-responses) for individual model responses and [Appendix B](#appendix-b-peer-rankings) for peer rankings.*\n\n`;
+      }
+      if (msg.stage1) {
+        appendixA += `## Appendix A: Individual Responses\n\n`;
+        for (const r of msg.stage1) {
+          appendixA += `### ${r.model}\n\n${r.response}\n\n`;
+        }
+      }
+      if (msg.stage2) {
+        appendixB += `## Appendix B: Peer Rankings\n\n`;
+        if (msg.metadata?.aggregate_rankings) {
+          appendixB += `### Aggregate Rankings\n\n`;
+          appendixB += `| Model | Average Rank |\n|-------|-------------|\n`;
+          for (const r of msg.metadata.aggregate_rankings) {
+            appendixB += `| ${r.model} | ${r.average_rank} |\n`;
+          }
+          appendixB += '\n';
+        }
+        for (const r of msg.stage2) {
+          appendixB += `### ${r.model}\n\n${r.ranking}\n\n`;
+        }
+      }
+    }
+  }
+  return (body + appendixA + appendixB).trim();
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ChatInterface({
   conversation,
   onSendMessage,
+  onRetry,
   isLoading,
 }) {
   const [input, setInput] = useState('');
@@ -104,6 +155,15 @@ export default function ChatInterface({
                     </div>
                   )}
                   {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
+
+                  {msg.error && (
+                    <div className="error-message">
+                      <span>Error: {msg.error}</span>
+                      <button className="retry-button" onClick={onRetry} disabled={isLoading}>
+                        Retry
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -119,6 +179,26 @@ export default function ChatInterface({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {conversation.messages.length > 0 && conversation.messages.some(m => m.stage3) && (
+        <div className="export-bar">
+          <button
+            className="export-button"
+            onClick={() => {
+              const md = buildMarkdownExport(conversation.messages);
+              downloadFile(md, `${conversation.title || 'council'}.md`, 'text/markdown');
+            }}
+          >
+            Export Markdown
+          </button>
+          <button
+            className="export-button"
+            onClick={() => window.print()}
+          >
+            Export PDF
+          </button>
+        </div>
+      )}
 
       {conversation.messages.length === 0 && (
         <form className="input-form" onSubmit={handleSubmit}>
