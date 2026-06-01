@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import ModelSelector from './components/ModelSelector';
 import { api } from './api';
 import './App.css';
 
@@ -9,11 +10,26 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [availableModels, setAvailableModels] = useState([]);
+  const [councilModels, setCouncilModels] = useState([]);
+  const [chairmanModel, setChairmanModel] = useState('');
 
-  // Load conversations on mount
+  // Load conversations and models on mount
   useEffect(() => {
     loadConversations();
+    loadModels();
   }, []);
+
+  const loadModels = async () => {
+    try {
+      const data = await api.getModels();
+      setAvailableModels(data.available);
+      setCouncilModels(data.default_council);
+      setChairmanModel(data.default_chairman);
+    } catch (error) {
+      console.error('Failed to load models:', error);
+    }
+  };
 
   // Load conversation details when selected
   useEffect(() => {
@@ -90,6 +106,7 @@ function App() {
       }));
 
       // Send message with streaming
+      const modelConfig = { council_models: councilModels, chairman_model: chairmanModel };
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
@@ -176,7 +193,7 @@ function App() {
           default:
             console.log('Unknown event type:', eventType);
         }
-      });
+      }, modelConfig);
     } catch (error) {
       console.error('Failed to send message:', error);
       setCurrentConversation((prev) => {
@@ -222,12 +239,23 @@ function App() {
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
       />
-      <ChatInterface
-        conversation={currentConversation}
-        onSendMessage={handleSendMessage}
-        onRetry={handleRetry}
-        isLoading={isLoading}
-      />
+      <div className="main-panel">
+        {availableModels.length > 0 && (
+          <ModelSelector
+            available={availableModels}
+            selected={councilModels}
+            chairman={chairmanModel}
+            onChangeCouncil={setCouncilModels}
+            onChangeChairman={setChairmanModel}
+          />
+        )}
+        <ChatInterface
+          conversation={currentConversation}
+          onSendMessage={handleSendMessage}
+          onRetry={handleRetry}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 }
