@@ -186,6 +186,18 @@
   .export-bar, .input-form, .sidebar {
     display: none !important;
   }
+
+  * {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .chat-interface, .messages-container, .message-list {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+  }
 }
 
 .error-message {

@@ -20,3 +20,11 @@
   flex: 1;
   overflow: hidden;
 }
+
+@media print {
+  .app, .main-panel {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
