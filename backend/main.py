@@ -79,7 +79,7 @@ async def test_key(request: TestKeyRequest):
     """Test if a Bedrock API key is valid."""
     from .llm_client import query_model
     result = await query_model(
-        "bedrock/us.anthropic.claude-sonnet-4-6",
+        "bedrock/us.anthropic.claude-3-haiku-20240307-v1:0",
         [{"role": "user", "content": "hi"}],
         timeout=15.0,
         api_key=request.api_key

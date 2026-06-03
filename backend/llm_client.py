@@ -1,6 +1,7 @@
 """LLM client supporting OpenAI-compatible APIs and AWS Bedrock."""
 
 import asyncio
+import base64
 import httpx
 from typing import List, Dict, Any, Optional
 from .config import LLM_API_KEY, LLM_BASE_URL, AWS_REGION, AWS_BEARER_TOKEN_BEDROCK
@@ -12,6 +13,11 @@ def _is_bedrock(model: str) -> bool:
 
 def _bedrock_model_id(model: str) -> str:
     return model.removeprefix("bedrock/")
+
+
+def _resolve_bearer_token(token: str) -> str:
+    """Return the bearer token as-is (Bedrock expects the full prefixed value)."""
+    return token
 
 
 async def _query_openai_compatible(
@@ -54,6 +60,7 @@ async def _query_bedrock(
 
     token = api_key or AWS_BEARER_TOKEN_BEDROCK
     if token:
+        token = _resolve_bearer_token(token)
         # Bearer token auth via REST API
         url = f"https://bedrock-runtime.{AWS_REGION}.amazonaws.com/model/{model_id}/converse"
         headers = {
