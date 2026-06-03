@@ -95,6 +95,14 @@ async def list_conversations():
     return storage.list_conversations()
 
 
+@app.delete("/api/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    """Delete a conversation."""
+    if storage.delete_conversation(conversation_id):
+        return {"status": "ok"}
+    raise HTTPException(status_code=404, detail="Conversation not found")
+
+
 @app.post("/api/conversations", response_model=Conversation)
 async def create_conversation(request: CreateConversationRequest):
     """Create a new conversation."""
