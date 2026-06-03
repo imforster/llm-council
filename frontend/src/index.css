@@ -119,3 +119,10 @@ body {
 .markdown-content tr:nth-child(even) {
   background: #fafafa;
 }
+
+@media print {
+  body, #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
