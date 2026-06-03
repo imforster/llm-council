@@ -170,3 +170,12 @@ def update_conversation_title(conversation_id: str, title: str):
 
     conversation["title"] = title
     save_conversation(conversation)
+
+
+def delete_conversation(conversation_id: str) -> bool:
+    """Delete a conversation file."""
+    path = get_conversation_path(conversation_id)
+    if os.path.exists(path):
+        os.remove(path)
+        return True
+    return False
